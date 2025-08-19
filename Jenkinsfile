@@ -50,9 +50,11 @@ pipeline {
                             docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion} .
                             docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion}
                         """
-                }
+                    }
+                }   
             }
         }
+
         stage('Test') {
             steps {
                 script{
