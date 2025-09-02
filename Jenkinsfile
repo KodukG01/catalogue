@@ -30,14 +30,12 @@ pipeline {
                 }
             }
         }
-        stage('Build') {
+        stage("Install Dependencies") {
             steps {
                 script {
                     sh """
-                        echo 'Building..'
-                        env
-                        echo "Hello, ${params.PERSON}"
-                    """
+                        npm install
+                        """
                 }
             }
         }
