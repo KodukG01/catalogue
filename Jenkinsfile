@@ -81,6 +81,7 @@ pipeline {
         }
         failure {
             echo "pipeline is failure"
+            }
         }
     }
 }
