@@ -3,10 +3,10 @@ pipeline {
         label 'roboshop-dev'
     }
 
-   /*  environment {
-        course = 'jenkins'
+    environment {
+        appVersion = ''
     }
- */
+
     options {
         timeout(time: 30, unit: 'SECONDS')
     }
@@ -20,6 +20,16 @@ pipeline {
     } */
 
     stages {
+        ges {
+            stage('Read package.json') {
+                steps {
+                    script {
+                        def packageJson = readJSON file: 'package.json'
+                        appVersion = packageJson.version
+                        echo "Package version: ${appVersion}"
+                    }
+                }
+            }
         stage('Build') {
             steps {
                 script {
