@@ -1,86 +1,76 @@
 pipeline {
-    agent  {
-        label 'AGENT-1'
+    agent {
+        label 'roboshop-dev'
     }
-    environment { 
-        appVersion = ''
-        REGION = 'us-east-1'
-        ACC_ID = '108717859359'
-        PROJECT = 'roboshop'
-        COMPONENT = 'catalogue'
-        
+
+   /*  environment {
+        course = 'jenkins'
     }
+ */
     options {
-        timeout(time: 30, unit: 'MINUTES') 
-        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'SECONDS')
     }
-    parameters {
-        booleanParam(name: 'deploy', defaultValue: false, description: 'Toggle this value')
-    }
-    // Build
+
+    /* parameters {
+        string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
+        text(name: 'BIOGRAPHY', defaultValue: '', description: 'Enter some information about the person')
+        booleanParam(name: 'TOGGLE', defaultValue: true, description: 'Toggle this value')
+        choice(name: 'CHOICE', choices: ['One', 'Two', 'Three'], description: 'Pick something')
+        password(name: 'PASSWORD', defaultValue: 'SECRET', description: 'Enter a password')
+    } */
+
     stages {
-         stage('Read package.json') {
-            steps {
-                script {
-                    def packageJson = readJSON file: 'package.json'
-                    appVersion = packageJson.version
-                    echo "Package version: ${appVersion}"
-                }
-            }
-        }
-        stage('Install Dependencies') {
+        stage('Build') {
             steps {
                 script {
                     sh """
-                    npm install
+                        echo 'Building..'
+                        env
+                        echo "Hello, ${params.PERSON}"
                     """
                 }
             }
         }
-        stage('Docker Build') {
-            steps {
-                script {
-                      withAWS(credentials: 'jenkins-ecr-user', region: 'us-east-1') {
-                        sh """
-                            aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
-                            docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion} .
-                            docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion}
-                        """
-                    }
-                }   
-            }
-        }
 
-       stage('Trigger Deploy') {
-            when{
-                expression { params.deploy }
-            }
+        stage('Test') {
             steps {
                 script {
-                    build job: 'catalogue-cd',
-                    parameters: [
-                        string(name: 'appVersion', value: "${appVersion}"),
-                        string(name: 'deploy_to', value: 'dev')
-                    ],
-                    propagate: false,  // even SG fails VPC will not be effected
-                    wait: false // VPC will not wait for SG pipeline completion
+                    echo 'Testing..'
                 }
             }
         }
-        
-        
+
+        stage('Parameters') {
+            steps {
+                script {
+                    echo "Hello ${params.PERSON}"
+                    echo "Biography: ${params.BIOGRAPHY}"
+                    echo "Toggle: ${params.TOGGLE}"
+                    echo "Choice: ${params.CHOICE}"
+                    echo "Password: ${params.PASSWORD}"
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    echo 'Deploying.....'
+                }
+            }
+        }
     }
 
-    post { 
-        always { 
-            echo 'I will always say Hello again!'
+    post {
+        always {
+            echo "Say hello"
             deleteDir()
         }
-        success { 
-            echo 'Hello Success'
+        success {
+            echo "pipeline is success"
         }
-        failure { 
-            echo 'Hello Failure'
+        failure {
+            echo "pipeline is failure"
         }
     }
 }
