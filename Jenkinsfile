@@ -12,7 +12,7 @@ pipeline {
     }
 
     options {
-        timeout(time: 30, unit: 'SECONDS')
+        timeout(time: 15, unit: 'MINUTES')
     }
 
     /* parameters {
