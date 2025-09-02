@@ -20,16 +20,16 @@ pipeline {
     } */
 
     stages {
-        ges {
-            stage('Read package.json') {
-                steps {
-                    script {
-                        def packageJson = readJSON file: 'package.json'
-                        appVersion = packageJson.version
-                        echo "Package version: ${appVersion}"
-                    }
+        
+    stage('Read package.json') {
+            steps {
+                script {
+                    def packageJson = readJSON file: 'package.json'
+                    appVersion = packageJson.version
+                    echo "Package version: ${appVersion}"
                 }
             }
+        }
         stage('Build') {
             steps {
                 script {
