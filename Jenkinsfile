@@ -67,44 +67,46 @@ pipeline {
                 waitForQualityGate abortPipeline: false }
             }
         } */
-        stage('Dependabot Security Check') {
-              environment {
-                GITHUB_TOKEN = credentials('github-token')
-    }
-      steps {
-        script {
-          def response = sh(
-            script: """curl -s -L \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: token ${GITHUB_TOKEN}" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              https://api.github.com/repos/KodukG01/catalogue/dependabot/alerts""",
-            returnStdout: true
-          ).trim()
+      stage('Dependabot Security Check') {
+        environment {
+        GITHUB_TOKEN = credentials('github-token') // GitHub PAT from Jenkins credentials
+  }
+  steps {
+    script {
+      def response = sh(
+        script: """curl -s -L \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/repos/KodukG01/catalogue/dependabot/alerts""",
+        returnStdout: true
+      ).trim()
 
-          // Parse JSON
-          def alerts = readJSON text: response
+      // Parse JSON
+      def alerts = readJSON text: response
 
-          // Filter for High and Critical
-          def highCritical = alerts.findAll { alert ->
-            def sev = alert.security_vulnerability.severity.toLowerCase()
-            return sev == "high" || sev == "critical"
-          }
+      // Filter only High/Critical AND Open alerts
+      def highCriticalOpen = alerts.findAll { alert ->
+        def sev = alert.security_vulnerability.severity.toLowerCase()
+        def st = alert.state.toLowerCase()
+        return (sev == "high" || sev == "critical") && st == "open"
+      }
 
-          if (highCritical.size() > 0) {
-            echo "❌ Found ${highCritical.size()} High/Critical security alerts!"
-            highCritical.each { alert ->
-              echo "  - ${alert.dependency.package.name} (${alert.security_vulnerability.severity}) : ${alert.security_advisory.summary}"
-              echo "    Fix Version: ${alert.security_vulnerability.first_patched_version.identifier}"
-              echo "    More Info: ${alert.html_url}"
-            }
-            error("Build failed due to open High/Critical security alerts.")
-          } else {
-            echo "✅ No High/Critical alerts found."
-          }
+      if (highCriticalOpen.size() > 0) {
+        echo "❌ Found ${highCriticalOpen.size()} open High/Critical security alerts!"
+        highCriticalOpen.each { alert ->
+          echo "  - ${alert.dependency.package.name} (${alert.security_vulnerability.severity})"
+          echo "    Summary   : ${alert.security_advisory.summary}"
+          echo "    Fix Ver.  : ${alert.security_vulnerability.first_patched_version.identifier}"
+          echo "    More Info : ${alert.html_url}"
         }
+        error("Build failed due to open High/Critical Dependabot alerts.")
+      } else {
+        echo "✅ No open High/Critical alerts found."
       }
     }
+  }
+}
 
        stage("Docker Build") {
             steps {
