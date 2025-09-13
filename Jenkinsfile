@@ -68,6 +68,9 @@ pipeline {
             }
         } */
         stage('Dependabot Security Check') {
+              environment {
+                GITHUB_TOKEN = credentials('github-token')
+    }
       steps {
         script {
           def response = sh(
