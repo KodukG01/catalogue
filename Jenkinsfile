@@ -67,40 +67,41 @@ pipeline {
                 waitForQualityGate abortPipeline: false }
             }
         }
-        // stage('Check Dependabot Alerts') {
-        //     environment { 
-        //         GITHUB_TOKEN = credentials('github-token')
-        //     }
-        //     steps {
-        //         script {
-        //             // Fetch alerts from GitHub
-        //             def response = sh(
-        //                 script: """
-        //                     curl -s -H "Accept: application/vnd.github+json" \
-        //                          -H "Authorization: token ${GITHUB_TOKEN}" \
-        //                          https://api.github.com/repos/KodukG01/catalogue/dependabot/alerts
-        //                 """,
-        //                 returnStdout: true
-        //             ).trim()
+        stage('Dependabot Security Check') {
+      steps {
+        script {
+          def response = sh(
+            script: """curl -s -L \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/KodukG01/catalogue/dependabot/alerts""",
+            returnStdout: true
+          ).trim()
 
-        //             // Parse JSON
-        //             def json = readJSON text: response
+          // Parse JSON
+          def alerts = readJSON text: response
 
-        //             // Filter alerts by severity
-        //             def criticalOrHigh = json.findAll { alert ->
-        //                 def severity = alert?.security_advisory?.severity?.toLowerCase()
-        //                 def state = alert?.state?.toLowerCase()
-        //                 return (state == "open" && (severity == "critical" || severity == "high"))
-        //             }
+          // Filter for High and Critical
+          def highCritical = alerts.findAll { alert ->
+            def sev = alert.security_vulnerability.severity.toLowerCase()
+            return sev == "high" || sev == "critical"
+          }
 
-        //             if (criticalOrHigh.size() > 0) {
-        //                 error "❌ Found ${criticalOrHigh.size()} HIGH/CRITICAL Dependabot alerts. Failing pipeline!"
-        //             } else {
-        //                 echo "✅ No HIGH/CRITICAL Dependabot alerts found."
-        //             }
-        //         }
-        //     }
-        // }
+          if (highCritical.size() > 0) {
+            echo "❌ Found ${highCritical.size()} High/Critical security alerts!"
+            highCritical.each { alert ->
+              echo "  - ${alert.dependency.package.name} (${alert.security_vulnerability.severity}) : ${alert.security_advisory.summary}"
+              echo "    Fix Version: ${alert.security_vulnerability.first_patched_version.identifier}"
+              echo "    More Info: ${alert.html_url}"
+            }
+            error("Build failed due to open High/Critical security alerts.")
+          } else {
+            echo "✅ No High/Critical alerts found."
+          }
+        }
+      }
+    }
 
        stage("Docker Build") {
             steps {
